@@ -67,6 +67,87 @@ move_plugin/
 
 ---
 
+## Database setup
+
+The bench scripts connect to a local PostgreSQL/MobilityDB database.
+You need to create that database yourself — instructions differ by dataset.
+
+---
+
+### STIB dataset (Brussels buses)
+
+The STIB data is not a public API dump — it is rebuilt locally from raw
+position snapshots using [LocalRtdatahub](https://github.com/Aelhamri/LocalRtdatahub),
+a standalone tool that ships 7 days of position data and reconstructs
+MobilityDB trajectories without any external API key.
+
+**Full setup instructions are in the LocalRtdatahub README.**
+The summary is:
+
+```bash
+# 1. Clone and enter the repo
+git clone https://github.com/Aelhamri/LocalRtdatahub
+cd LocalRtdatahub
+
+# 2. Install PostgreSQL + PostGIS + MobilityDB
+#    (see LocalRtdatahub README §1–§2 for exact commands)
+
+# 3. Create the DB and schema
+createdb -U postgres rtdatahub_local
+psql -U postgres rtdatahub_local -c "CREATE EXTENSION postgis; CREATE EXTENSION mobilitydb;"
+psql "postgresql://rtdatahub:rtdatahub@localhost:5432/rtdatahub_local" -f sql/schema.sql
+
+# 4. Python env
+python -m venv env && source env/bin/activate
+pip install -r requirements.txt
+
+# 5. Load the shipped position dumps (static catalogue + 7 days of positions)
+python -m src.etl.ingestion.bench.ingestor data/bench_algo_data/
+
+# 6. Build MobilityDB trips (groups positions into tgeompoint trajectories)
+python -m src.etl.pipeline.load.load_stib
+```
+
+After step 6, `rt.stib_trip` is populated and the bench defaults in
+`bench_config.py` connect to it with no extra configuration:
+
+```
+host=localhost  port=5432  db=rtdatahub_local  user=rtdatahub  password=rtdatahub
+```
+
+The shipped data covers 2026-05-04 → 2026-05-10. The bench defaults use
+`BENCH_DATE=2026-05-02` (densest day in the original full dataset); with
+the shipped sample, use any date in that range, e.g.:
+
+```bash
+export BENCH_DATE=2026-05-07
+```
+
+---
+
+### AIS dataset (Danish ships)
+
+The AIS dataset used in this bench is the one from the
+**MobilityDB workshop** (Danish Maritime Authority, 2023-06-01).
+Follow the workshop to download and ingest it into a local MobilityDB
+database:
+
+> https://github.com/MobilityDB/MobilityDB-workshop
+
+After completing the workshop ingestion, configure the connection:
+
+```bash
+export BENCH_DATASET=ais
+export BENCH_DB_NAME=AISdata01062023
+export BENCH_DB_USER=postgres
+export BENCH_DB_PASSWORD=postgres
+```
+
+The bench expects a table `public.ships` with columns `mmsi` (id) and
+`trip` (tgeompoint), SRID 25832 — exactly what the workshop produces.
+
+---
+
 ## Configuration
 
 All scripts read from `bench_config.py` at the repo root. Override via environment
