@@ -6,7 +6,7 @@ directement via QPainter sur le canvas, bypassant tout le QgsMapRendererJob
 pipeline.
 
 Source du code :
-  /home/osboxes/move_pr_work/move/move_trajectory_item.py (MOVE plugin officiel)
+  move_plugin/move_trajectory_item.py (MOVE plugin, this repo)
 
 Trade-offs (déjà documentés dans le code source) :
   - Pas de QgsVectorLayer (pas de layer tree, opacity, save/restore .qgz)
@@ -33,7 +33,7 @@ from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR.parent))
-sys.path.insert(0, '/home/osboxes/move_pr_work/move')  # for MoveTrajectoryItem
+sys.path.insert(0, str(THIS_DIR.parent / 'move_plugin'))  # for MoveTrajectoryItem
 import bench_config as cfg
 
 import psycopg2

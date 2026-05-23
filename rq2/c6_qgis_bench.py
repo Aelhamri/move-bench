@@ -52,12 +52,11 @@ from pathlib import Path
 try:
     THIS_DIR = Path(__file__).resolve().parent
 except NameError:
-    # Lancé via `qgis --code <script>` qui n'expose pas __file__
-    THIS_DIR = Path(os.environ.get(
-        "BENCH_SCRIPT_DIR",
-        "/home/osboxes/Desktop/CodeTest/PR/RQ2",
-    ))
+    # When launched via `qgis --code <script>`, __file__ is not set.
+    # Export BENCH_SCRIPT_DIR=/path/to/move-bench/rq2 before running.
+    THIS_DIR = Path(os.environ['BENCH_SCRIPT_DIR'])
 sys.path.insert(0, str(THIS_DIR))
+sys.path.insert(0, str(THIS_DIR.parent))   # for bench_config
 import bench_config as cfg
 
 import psycopg2

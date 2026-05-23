@@ -1,24 +1,25 @@
 """
-RQ1-FINAL — Master orchestrator pour bench cross-comparison 6 conditions × 2 datasets
-======================================================================================
-Lance séquentiellement les 6 conditions sur le dataset courant (BENCH_DATASET).
-Chaque condition est un script bench standalone qui produit son propre JSON.
+RQ1-FINAL — Master orchestrator: 6 conditions × 2 datasets
+============================================================
+Runs all six conditions sequentially for the current BENCH_DATASET.
+Each condition is a standalone script that writes its own JSON summary.
 
-Usage dans QGIS console (FRESH session):
+Usage in QGIS Python console (fresh session):
 
     import sys, os
-    os.environ['BENCH_DATASET'] = 'ais'      # ou 'stib'
-    os.environ['BENCH_N_TRIPS']  = '5000'
-    os.environ['BENCH_N_FRAMES'] = '60'
-    os.environ['BENCH_N_RUNS']   = '5'
+    os.environ['BENCH_DATASET']    = 'stib'   # or 'ais'
+    os.environ['BENCH_N_TRIPS']    = '5000'
+    os.environ['BENCH_N_FRAMES']   = '60'
+    os.environ['BENCH_N_RUNS']     = '5'
+    os.environ['BENCH_SCRIPT_DIR'] = '/path/to/move-bench/rq1'
     if 'bench_config' in sys.modules:
         del sys.modules['bench_config']
-    exec(open('/home/osboxes/rq1/bench5_master.py').read())
+    exec(open('/path/to/move-bench/rq1/master.py').read())
 
-À la fin : 6 fichiers JSON dans /home/osboxes/bench_results/<dataset>/rq1/
-Lance ensuite bench5_aggregate.py pour produire la matrice 6×2.
+Results land in ~/bench_results/<dataset>/rq1/
+Run aggregate.py afterwards to build the 6×2 matrix.
 
-NOTE: pour le 2ème dataset, redémarre QGIS et change BENCH_DATASET.
+NOTE: for the second dataset, restart QGIS and change BENCH_DATASET.
 
 Author: Ayoub El Hamri
 """
@@ -26,9 +27,14 @@ Author: Ayoub El Hamri
 import sys, os, gc, time
 from pathlib import Path
 
-THIS_DIR = Path('/home/osboxes/rq1')
+try:
+    THIS_DIR = Path(__file__).resolve().parent
+except NameError:
+    THIS_DIR = Path(os.environ['BENCH_SCRIPT_DIR'])
+
 sys.path.insert(0, str(THIS_DIR))
-from bench5_metrics import RunMonitor
+sys.path.insert(0, str(THIS_DIR.parent))   # for bench_config
+from metrics import RunMonitor
 
 # CRITICAL FIX (review bug #1) : C1/C3 lisent BENCH_N_TRIPS, C4/C5/C6 lisent BENCH_LIMIT.
 # Synchroniser pour que TOUTES les conditions tournent sur la même taille de subset.
@@ -44,12 +50,12 @@ for mod_name in list(sys.modules):
         del sys.modules[mod_name]
 
 CONDITIONS = [
-    ('c1_ali_naive',     'bench5_c1_ali_naive.py',  'Ali naïve géométrique (PyMEOS OO loop)'),
-    ('c2_ali_optim',     'bench5_c2_ali_optim.py',  'Ali optimized par Ayoub (raw EWKB + provider direct)'),
-    ('c3_move_fast',     'bench5_c3_fast.py',       'MOVE Fast Preview (MoveTrajectoryItem)'),
-    ('c4_columnar',      'columnar.py',             'Columnar Ayoub (NumPy precompute)'),
-    ('c5_move_upstream', 'move.py',                 'MOVE upstream (postgres + line_interpolate_point)'),
-    ('c6_move_upgrade',  'move_inmemory.py',        'MOVE upgrade (memory layer + line_interpolate_point)'),
+    ('c1_ali_naive',     'c1_ali_naive.py',          'Ali naive (PyMEOS OO loop)'),
+    ('c2_ali_optim',     'c2_ali_optim.py',          'Ali optimized (raw EWKB + provider direct)'),
+    ('c3_move_fast',     'c3_move_fast_preview.py',  'MOVE Fast Preview (QgsMapCanvasItem)'),
+    ('c4_columnar',      'c4_columnar.py',           'Columnar NumPy precompute'),
+    ('c5_move_upstream', 'c5_move_upstream.py',      'MOVE upstream (postgres + line_interpolate_point)'),
+    ('c6_move_upgrade',  'c6_move_upgrade.py',       'MOVE upgrade (memory layer + line_interpolate_point)'),
 ]
 
 
@@ -76,7 +82,8 @@ for cid, script, desc in CONDITIONS:
     print("=" * 80)
 
     # CPU+RAM monitoring (background thread sampling)
-    metrics_dir = Path('/home/osboxes/bench_results') / os.environ.get('BENCH_DATASET', 'unknown') / 'rq1' / 'metrics'
+    import bench_config as _cfg
+    metrics_dir = _cfg.RQ1_DIR / 'metrics'
     monitor = RunMonitor(cid, os.environ.get('BENCH_DATASET', 'unknown'), metrics_dir)
     monitor.start()
 
@@ -112,5 +119,5 @@ t_master_total = time.perf_counter() - t_master_start
 print()
 print("=" * 80)
 print(f"[MASTER] ALL CONDITIONS DONE in {t_master_total:.0f}s ({t_master_total/60:.1f} min)")
-print(f"[MASTER] Now run bench5_aggregate.py to build the 6×2 matrix chart")
+print(f"[MASTER] Now run aggregate.py to build the 6×2 matrix chart")
 print("=" * 80)

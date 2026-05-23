@@ -47,7 +47,8 @@ CONDITIONS = [
     ('c6_move_upgrade',  'MOVE upgrade'),
 ]
 
-OUTPUT_DIR = Path('/home/osboxes/rq1')
+import os as _os
+OUTPUT_DIR = Path(__file__).resolve().parent
 
 
 def load_summary(dataset, condition_id):
@@ -56,7 +57,7 @@ def load_summary(dataset, condition_id):
     FIX bug #2 (review) : naming patterns aligned with what each bench
     actually produces. C4/C5/C6 use `<LABEL>_limit<N>_summary.json`.
     """
-    base_dir = Path(f'/home/osboxes/bench_results/{dataset}/rq1')
+    base_dir = Path(_os.path.expanduser(f'~/bench_results/{dataset}/rq1'))
     paths_to_try = [base_dir / f'bench5_{condition_id}_{dataset}_summary.json']
 
     # Fallback patterns for legacy bench scripts
@@ -121,7 +122,7 @@ def median_of_medians_with_ci(summary, drop_run_1=True):
 
 def load_metrics(dataset, condition_id):
     """Load CPU/RAM metrics dumped by bench5_master."""
-    p = Path(f'/home/osboxes/bench_results/{dataset}/rq1/metrics/{condition_id}_metrics.json')
+    p = Path(_os.path.expanduser(f'~/bench_results/{dataset}/rq1/metrics/{condition_id}_metrics.json'))
     if p.exists():
         with open(p) as f:
             return json.load(f)
@@ -228,7 +229,7 @@ for dataset in DATASETS:
 # -----------------------------------------------------------------------------
 # CSV export
 # -----------------------------------------------------------------------------
-csv_path = OUTPUT_DIR / 'bench5_cross_matrix.csv'
+csv_path = OUTPUT_DIR / 'cross_matrix.csv'
 with open(csv_path, 'w', newline='') as f:
     w = csv.writer(f)
     w.writerow(['condition_id', 'condition_label', 'dataset', 'median_ms',

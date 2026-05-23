@@ -42,8 +42,9 @@ mpl.rcParams.update({
     'grid.linestyle':    ':',
 })
 
-CSV_PATH = Path('/home/osboxes/rq1/bench5_cross_matrix.csv')
-OUT_DIR  = Path('/home/osboxes/rq1/charts')
+_HERE    = Path(__file__).resolve().parent
+CSV_PATH = _HERE / 'results' / 'cross_matrix.csv'
+OUT_DIR  = _HERE / 'charts'
 OUT_DIR.mkdir(exist_ok=True)
 
 CONDITIONS = [
